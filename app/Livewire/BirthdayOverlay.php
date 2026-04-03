@@ -12,18 +12,13 @@ class BirthdayOverlay extends Component
     {
         $user = auth()->user();
 
-        if ($user
-            && $user->email === 'anita.kotelko@gmail.com'
-            && !$user->has_seen_birthday
-        ) {
+        if ($user && $user->email === 'anita.kotelko@gmail.com') {
             $this->show = true;
         }
     }
 
     public function dismiss(): void
     {
-        $user = auth()->user();
-        $user->update(['has_seen_birthday' => true]);
         $this->show = false;
     }
 

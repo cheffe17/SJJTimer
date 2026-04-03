@@ -11,7 +11,13 @@
       "Bash(npm run:*)",
       "Bash(gh auth:*)",
       "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
-      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth status)"
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth status)",
+      "Bash(ssh -o StrictHostKeyChecking=no -p 65002 u796085101@89.117.117.67 \"echo 'SSH OK'\")",
+      "Bash(sshpass -p 'Login12345678?+' ssh -o StrictHostKeyChecking=no -p 65002 u796085101@89.117.117.67 \"echo 'SSH OK'\")",
+      "Bash(winget install:*)",
+      "Bash(pip install:*)",
+      "Bash(python -c ':*)",
+      "WebFetch(domain:ssjtimer.com)"
     ]
   }
 }

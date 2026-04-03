@@ -32,5 +32,10 @@
                 {{ $slot }}
             </main>
         </div>
+
+        {{-- Birthday Easter Egg --}}
+        @auth
+            <livewire:birthday-overlay />
+        @endauth
     </body>
 </html>

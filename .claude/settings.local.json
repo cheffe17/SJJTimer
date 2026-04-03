@@ -8,7 +8,10 @@
       "Bash(php artisan:*)",
       "Bash(composer require:*)",
       "Bash(npm install:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(gh auth:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth status)"
     ]
   }
 }

@@ -1,0 +1,275 @@
+<div class="space-y-8" wire:poll.10s>
+    {{-- Calendar --}}
+    <div class="bg-white rounded-2xl shadow-lg shadow-indigo-100/50 overflow-hidden">
+        <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-6 py-5">
+            <div class="flex items-center justify-between">
+                <button wire:click="previousMonth" class="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-all duration-200 backdrop-blur-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+                <h2 class="text-xl font-bold text-white tracking-wide">{{ $monthName }}</h2>
+                <button wire:click="nextMonth" class="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-all duration-200 backdrop-blur-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        {{-- Weekday Headers --}}
+        <div class="grid grid-cols-7 bg-gray-50 border-b border-gray-100">
+            @foreach(['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'] as $day)
+                <div class="py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">{{ $day }}</div>
+            @endforeach
+        </div>
+
+        {{-- Calendar Grid --}}
+        <div class="grid grid-cols-7">
+            @foreach($calendarDays as $calDay)
+                @if($calDay === null)
+                    <div class="min-h-[100px] border-b border-r border-gray-50"></div>
+                @else
+                    <div
+                        wire:click="openModal('{{ $calDay['date'] }}')"
+                        class="min-h-[100px] border-b border-r border-gray-50 p-2 cursor-pointer transition-all duration-200 hover:bg-indigo-50/50 group
+                            {{ $calDay['isToday'] ? 'bg-indigo-50/80' : '' }}"
+                    >
+                        <span class="inline-flex items-center justify-center w-7 h-7 text-sm rounded-full transition-all duration-200
+                            {{ $calDay['isToday']
+                                ? 'bg-indigo-500 text-white font-bold shadow-md shadow-indigo-200'
+                                : 'text-gray-700 group-hover:bg-indigo-100 group-hover:text-indigo-700' }}">
+                            {{ $calDay['day'] }}
+                        </span>
+                        <div class="mt-1 space-y-1">
+                            @foreach($calDay['events'] as $event)
+                                <div
+                                    wire:click.stop="{{ $event->created_by === $currentUserId ? 'editEvent('.$event->id.')' : '' }}"
+                                    class="text-xs px-2 py-1 rounded-lg truncate font-medium transition-all duration-200 hover:shadow-sm relative
+                                        {{ $event->created_by === $currentUserId ? 'cursor-pointer hover:scale-[1.02]' : 'cursor-default' }}
+                                        @if($event->type === 'flight') bg-sky-100 text-sky-700
+                                        @elseif($event->type === 'visit') bg-emerald-100 text-emerald-700
+                                        @else bg-rose-100 text-rose-700
+                                        @endif"
+                                    title="{{ $event->title }} — {{ $event->creator->name }}{{ $event->shared ? ' & ' . ($event->created_by === $currentUserId ? ($partnerName ?? 'Partner') : 'du') : '' }}"
+                                >
+                                    @if($event->type === 'flight') &#9992;
+                                    @elseif($event->type === 'visit') &#10084;
+                                    @else &#9733;
+                                    @endif
+                                    {{ $event->title }}
+                                    {{-- Partner badge for events from partner --}}
+                                    @if($event->created_by !== $currentUserId)
+                                        <span class="text-[10px] opacity-60">&middot; {{ $event->creator->name }}</span>
+                                    @endif
+                                    {{-- Shared indicator --}}
+                                    @if($event->shared)
+                                        <span class="text-[10px] opacity-50">&#128107;</span>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            @endforeach
+        </div>
+    </div>
+
+    {{-- Bottom: Add + Upcoming --}}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1">
+            <button
+                wire:click="openModal"
+                class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl shadow-lg shadow-indigo-200/50 p-6 hover:shadow-xl hover:shadow-indigo-200/60 transition-all duration-300 hover:-translate-y-0.5 group"
+            >
+                <div class="flex items-center justify-center space-x-3">
+                    <svg class="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    <span class="text-lg font-semibold">Neues Event</span>
+                </div>
+            </button>
+        </div>
+
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-2xl shadow-lg shadow-indigo-100/50 p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    Kommende Events
+                </h3>
+
+                @if($upcomingEvents->isEmpty())
+                    <div class="text-center py-8">
+                        <div class="text-gray-300 mb-3">
+                            <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                        <p class="text-gray-400 text-sm">Noch keine Events geplant</p>
+                    </div>
+                @else
+                    <div class="space-y-3">
+                        @foreach($upcomingEvents as $event)
+                            <div class="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all duration-200 group">
+                                <div class="flex items-center space-x-4">
+                                    <div class="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-lg
+                                        @if($event->type === 'flight') bg-sky-100 text-sky-600
+                                        @elseif($event->type === 'visit') bg-emerald-100 text-emerald-600
+                                        @else bg-rose-100 text-rose-600
+                                        @endif">
+                                        @if($event->type === 'flight') &#9992;
+                                        @elseif($event->type === 'visit') &#10084;
+                                        @else &#9733;
+                                        @endif
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold text-gray-800">{{ $event->title }}</p>
+                                        <p class="text-sm text-gray-500">
+                                            {{ $event->start_time->format('d.m.Y, H:i') }} Uhr
+                                            @if($event->end_time)
+                                                &mdash; {{ $event->end_time->format('d.m.Y, H:i') }} Uhr
+                                            @endif
+                                        </p>
+                                        <div class="flex items-center gap-2 mt-0.5">
+                                            <span class="text-xs {{ $event->created_by === $currentUserId ? 'text-indigo-500' : 'text-pink-500' }}">
+                                                {{ $event->created_by === $currentUserId ? 'Von dir' : 'Von ' . $event->creator->name }}
+                                            </span>
+                                            @if($event->shared)
+                                                <span class="text-xs text-purple-500 flex items-center gap-0.5">
+                                                    &#128107; Gemeinsam
+                                                </span>
+                                            @else
+                                                <span class="text-xs text-gray-400">Solo</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                @if($event->created_by === $currentUserId)
+                                    <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                        <button wire:click="editEvent({{ $event->id }})" class="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                            </svg>
+                                        </button>
+                                        <button wire:click="deleteEvent({{ $event->id }})" wire:confirm="Event wirklich löschen?" class="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                @else
+                                    <div class="px-3 py-1 rounded-full bg-pink-50 text-pink-500 text-xs font-medium">
+                                        {{ $event->creator->name }}
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal --}}
+    @if($showModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4" x-data x-init="$el.querySelector('input[type=text]')?.focus()">
+            <div wire:click="closeModal" class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"></div>
+
+            <div class="relative bg-white rounded-3xl shadow-2xl shadow-indigo-200/50 w-full max-w-lg">
+                <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-t-3xl px-6 py-5">
+                    <h3 class="text-lg font-bold text-white">
+                        {{ $editingEventId ? 'Event bearbeiten' : 'Neues Event erstellen' }}
+                    </h3>
+                </div>
+
+                <form wire:submit="save" class="p-6 space-y-5">
+                    {{-- Title --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Titel</label>
+                        <input type="text" wire:model="title" placeholder="z.B. Flug nach Wien"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 text-gray-700 placeholder-gray-400" />
+                        @error('title') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                    </div>
+
+                    {{-- Type --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Typ</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <label class="cursor-pointer">
+                                <input type="radio" wire:model.live="type" value="flight" class="peer hidden" />
+                                <div class="peer-checked:border-sky-400 peer-checked:bg-sky-50 peer-checked:text-sky-700 border-2 border-gray-200 rounded-xl p-3 text-center text-sm font-medium text-gray-500 transition-all duration-200 hover:border-gray-300">
+                                    <div class="text-xl mb-1">&#9992;</div>Flug
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" wire:model.live="type" value="visit" class="peer hidden" />
+                                <div class="peer-checked:border-emerald-400 peer-checked:bg-emerald-50 peer-checked:text-emerald-700 border-2 border-gray-200 rounded-xl p-3 text-center text-sm font-medium text-gray-500 transition-all duration-200 hover:border-gray-300">
+                                    <div class="text-xl mb-1">&#10084;</div>Besuch
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" wire:model.live="type" value="date" class="peer hidden" />
+                                <div class="peer-checked:border-rose-400 peer-checked:bg-rose-50 peer-checked:text-rose-700 border-2 border-gray-200 rounded-xl p-3 text-center text-sm font-medium text-gray-500 transition-all duration-200 hover:border-gray-300">
+                                    <div class="text-xl mb-1">&#9733;</div>Date
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- Shared toggle --}}
+                    @if($partnerName)
+                        <div>
+                            <label class="flex items-center justify-between p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer
+                                {{ $shared ? 'border-purple-300 bg-purple-50' : 'border-gray-200 bg-white' }}">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-lg">&#128107;</span>
+                                    <div>
+                                        <p class="text-sm font-semibold {{ $shared ? 'text-purple-700' : 'text-gray-700' }}">
+                                            Gemeinsam mit {{ $partnerName }}
+                                        </p>
+                                        <p class="text-xs {{ $shared ? 'text-purple-500' : 'text-gray-400' }}">
+                                            {{ $shared ? 'Ihr macht das zusammen' : 'Nur für dich' }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="relative">
+                                    <input type="checkbox" wire:model.live="shared" class="sr-only peer" />
+                                    <div class="w-11 h-6 bg-gray-200 peer-checked:bg-purple-500 rounded-full transition-colors duration-200"></div>
+                                    <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 peer-checked:translate-x-5"></div>
+                                </div>
+                            </label>
+                        </div>
+                    @endif
+
+                    {{-- Start Time --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Startzeit</label>
+                        <input type="datetime-local" wire:model="start_time"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 text-gray-700" />
+                        @error('start_time') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                    </div>
+
+                    {{-- End Time --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Endzeit <span class="text-gray-400 font-normal">(optional)</span></label>
+                        <input type="datetime-local" wire:model="end_time"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 text-gray-700" />
+                        @error('end_time') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                    </div>
+
+                    {{-- Actions --}}
+                    <div class="flex items-center justify-end space-x-3 pt-2">
+                        <button type="button" wire:click="closeModal" class="px-6 py-3 rounded-xl text-gray-600 font-medium hover:bg-gray-100 transition-all duration-200">
+                            Abbrechen
+                        </button>
+                        <button type="submit" class="px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold shadow-lg shadow-indigo-200/50 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
+                            {{ $editingEventId ? 'Speichern' : 'Erstellen' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+</div>

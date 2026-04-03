@@ -1,3 +1,4 @@
+<div>
 @if($show)
 <div
     x-data="{
@@ -55,3 +56,4 @@
     </div>
 </div>
 @endif
+</div>

@@ -1,0 +1,13 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Anfragen an den public-Ordner weiterleiten
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ /public/$1 [L]
+</IfModule>
+
+# Zugriff auf sensible Dateien blockieren
+<FilesMatch "^\.env|composer\.(json|lock)|artisan$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>

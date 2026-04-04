@@ -1,78 +1,269 @@
 <div class="space-y-8" wire:poll.10s>
     {{-- Calendar --}}
     <div class="bg-white rounded-2xl shadow-lg shadow-indigo-100/50 overflow-hidden">
+        {{-- Header with navigation and view switcher --}}
         <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-6 py-5">
-            <div class="flex items-center justify-between">
-                <button wire:click="previousMonth" class="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-all duration-200 backdrop-blur-sm">
+            <div class="flex items-center justify-between mb-3">
+                <button wire:click="previousPeriod" class="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-all duration-200 backdrop-blur-sm">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
                 </button>
-                <h2 class="text-xl font-bold text-white tracking-wide">{{ $monthName }}</h2>
-                <button wire:click="nextMonth" class="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-all duration-200 backdrop-blur-sm">
+                <div class="text-center">
+                    <h2 class="text-xl font-bold text-white tracking-wide">{{ $periodLabel }}</h2>
+                </div>
+                <button wire:click="nextPeriod" class="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-all duration-200 backdrop-blur-sm">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </button>
             </div>
+            {{-- View Switcher --}}
+            <div class="flex items-center justify-center gap-1">
+                <button wire:click="goToToday" class="px-3 py-1.5 rounded-lg text-xs font-medium text-white/80 hover:bg-white/20 transition-all duration-200 mr-2">
+                    Heute
+                </button>
+                @foreach(['year' => 'Jahr', 'month' => 'Monat', 'week' => 'Woche', 'day' => 'Tag'] as $v => $label)
+                    <button wire:click="setView('{{ $v }}')"
+                        class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200
+                            {{ $view === $v ? 'bg-white text-indigo-600 shadow-md' : 'text-white/80 hover:bg-white/20' }}">
+                        {{ $label }}
+                    </button>
+                @endforeach
+            </div>
         </div>
 
-        {{-- Weekday Headers --}}
-        <div class="grid grid-cols-7 bg-gray-50 border-b border-gray-100">
-            @foreach(['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'] as $day)
-                <div class="py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">{{ $day }}</div>
-            @endforeach
-        </div>
+        {{-- Active Events Banner --}}
+        @if($activeEvents->isNotEmpty())
+            <div class="bg-emerald-50 border-b border-emerald-100 px-6 py-3">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-sm font-semibold text-emerald-700">Gerade aktiv</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    @foreach($activeEvents as $event)
+                        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium
+                            @if($event->type === 'flight') bg-sky-100 text-sky-700
+                            @elseif($event->type === 'visit') bg-emerald-100 text-emerald-700
+                            @else bg-rose-100 text-rose-700 @endif">
+                            @if($event->type === 'flight') &#9992;
+                            @elseif($event->type === 'visit') &#10084;
+                            @else &#9733; @endif
+                            {{ $event->title }}
+                            <span class="opacity-60">{{ $event->start_time->format('H:i') }}&ndash;{{ $event->end_time->format('H:i') }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
 
-        {{-- Calendar Grid --}}
-        <div class="grid grid-cols-7">
-            @foreach($calendarDays as $calDay)
-                @if($calDay === null)
-                    <div class="min-h-[100px] border-b border-r border-gray-50"></div>
-                @else
-                    <div
-                        wire:click="openModal('{{ $calDay['date'] }}')"
-                        class="min-h-[100px] border-b border-r border-gray-50 p-2 cursor-pointer transition-all duration-200 hover:bg-indigo-50/50 group
-                            {{ $calDay['isToday'] ? 'bg-indigo-50/80' : '' }}"
-                    >
-                        <span class="inline-flex items-center justify-center w-7 h-7 text-sm rounded-full transition-all duration-200
-                            {{ $calDay['isToday']
-                                ? 'bg-indigo-500 text-white font-bold shadow-md shadow-indigo-200'
-                                : 'text-gray-700 group-hover:bg-indigo-100 group-hover:text-indigo-700' }}">
-                            {{ $calDay['day'] }}
-                        </span>
-                        <div class="mt-1 space-y-1">
-                            @foreach($calDay['events'] as $event)
-                                <div
-                                    wire:click.stop="{{ $event->created_by === $currentUserId ? 'editEvent('.$event->id.')' : '' }}"
-                                    class="text-xs px-2 py-1 rounded-lg truncate font-medium transition-all duration-200 hover:shadow-sm relative
-                                        {{ $event->created_by === $currentUserId ? 'cursor-pointer hover:scale-[1.02]' : 'cursor-default' }}
-                                        @if($event->type === 'flight') bg-sky-100 text-sky-700
-                                        @elseif($event->type === 'visit') bg-emerald-100 text-emerald-700
-                                        @else bg-rose-100 text-rose-700
-                                        @endif"
-                                    title="{{ $event->title }} — {{ $event->creator->name }}{{ $event->shared ? ' & ' . ($event->created_by === $currentUserId ? ($partnerName ?? 'Partner') : 'du') : '' }}"
-                                >
-                                    @if($event->type === 'flight') &#9992;
-                                    @elseif($event->type === 'visit') &#10084;
-                                    @else &#9733;
+        {{-- ======================== YEAR VIEW ======================== --}}
+        @if($view === 'year')
+            <div class="p-6">
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    @foreach($yearMonths as $month)
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-700 mb-2">{{ $month['name'] }}</h3>
+                            <div class="grid grid-cols-7 gap-px text-center">
+                                @foreach(['M','D','M','D','F','S','S'] as $d)
+                                    <div class="text-[10px] text-gray-400 font-medium py-0.5">{{ $d }}</div>
+                                @endforeach
+                                @foreach($month['days'] as $day)
+                                    @if($day === null)
+                                        <div class="w-6 h-6"></div>
+                                    @else
+                                        <div
+                                            class="w-6 h-6 flex items-center justify-center text-[11px] rounded-full cursor-pointer transition-all
+                                                {{ $day['isToday'] ? 'bg-indigo-500 text-white font-bold' : '' }}
+                                                {{ $day['hasEvents'] && !$day['isToday'] ? 'bg-purple-100 text-purple-700 font-semibold' : '' }}
+                                                {{ !$day['isToday'] && !$day['hasEvents'] ? 'text-gray-600 hover:bg-gray-100' : '' }}"
+                                            wire:click="openModal('{{ $day['date'] }}')"
+                                        >
+                                            {{ $day['day'] }}
+                                        </div>
                                     @endif
-                                    {{ $event->title }}
-                                    {{-- Partner badge for events from partner --}}
-                                    @if($event->created_by !== $currentUserId)
-                                        <span class="text-[10px] opacity-60">&middot; {{ $event->creator->name }}</span>
-                                    @endif
-                                    {{-- Shared indicator --}}
-                                    @if($event->shared)
-                                        <span class="text-[10px] opacity-50">&#128107;</span>
-                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+        {{-- ======================== MONTH VIEW ======================== --}}
+        @elseif($view === 'month')
+            {{-- Weekday Headers --}}
+            <div class="grid grid-cols-7 bg-gray-50 border-b border-gray-100">
+                @foreach(['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'] as $day)
+                    <div class="py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">{{ $day }}</div>
+                @endforeach
+            </div>
+
+            {{-- Calendar Grid --}}
+            <div class="grid grid-cols-7">
+                @foreach($calendarDays as $calDay)
+                    @if($calDay === null)
+                        <div class="min-h-[100px] border-b border-r border-gray-50"></div>
+                    @else
+                        <div
+                            wire:click="openModal('{{ $calDay['date'] }}')"
+                            class="min-h-[100px] border-b border-r border-gray-50 p-2 cursor-pointer transition-all duration-200 hover:bg-indigo-50/50 group
+                                {{ $calDay['isToday'] ? 'bg-indigo-50/80' : '' }}"
+                        >
+                            <span class="inline-flex items-center justify-center w-7 h-7 text-sm rounded-full transition-all duration-200
+                                {{ $calDay['isToday']
+                                    ? 'bg-indigo-500 text-white font-bold shadow-md shadow-indigo-200'
+                                    : 'text-gray-700 group-hover:bg-indigo-100 group-hover:text-indigo-700' }}">
+                                {{ $calDay['day'] }}
+                            </span>
+                            <div class="mt-1 space-y-1">
+                                @foreach($calDay['events'] as $event)
+                                    <div
+                                        wire:click.stop="{{ $event->created_by === $currentUserId ? 'editEvent('.$event->id.')' : '' }}"
+                                        class="text-xs px-2 py-1 rounded-lg truncate font-medium transition-all duration-200 hover:shadow-sm relative
+                                            {{ $event->created_by === $currentUserId ? 'cursor-pointer hover:scale-[1.02]' : 'cursor-default' }}
+                                            @if($event->type === 'flight') bg-sky-100 text-sky-700
+                                            @elseif($event->type === 'visit') bg-emerald-100 text-emerald-700
+                                            @else bg-rose-100 text-rose-700
+                                            @endif"
+                                        title="{{ $event->title }} — {{ $event->creator->name }}{{ $event->shared ? ' & ' . ($event->created_by === $currentUserId ? ($partnerName ?? 'Partner') : 'du') : '' }}"
+                                    >
+                                        @if($event->type === 'flight') &#9992;
+                                        @elseif($event->type === 'visit') &#10084;
+                                        @else &#9733;
+                                        @endif
+                                        {{ $event->title }}
+                                        @if($event->created_by !== $currentUserId)
+                                            <span class="text-[10px] opacity-60">&middot; {{ $event->creator->name }}</span>
+                                        @endif
+                                        @if($event->shared)
+                                            <span class="text-[10px] opacity-50">&#128107;</span>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                @endforeach
+            </div>
+
+        {{-- ======================== WEEK VIEW ======================== --}}
+        @elseif($view === 'week')
+            <div class="overflow-x-auto">
+                {{-- Day headers --}}
+                <div class="grid grid-cols-8 border-b border-gray-100 min-w-[800px]">
+                    <div class="py-3 px-2 text-xs text-gray-400 font-medium"></div>
+                    @foreach($weekData['days'] as $day)
+                        <div class="py-3 px-2 text-center border-l border-gray-100
+                            {{ $day['isToday'] ? 'bg-indigo-50' : '' }}">
+                            <div class="text-xs font-semibold {{ $day['isToday'] ? 'text-indigo-600' : 'text-gray-500' }}">
+                                {{ $day['label'] }}
+                            </div>
+                            @if($day['events']->isNotEmpty())
+                                <div class="flex justify-center gap-0.5 mt-1">
+                                    @foreach($day['events']->take(3) as $event)
+                                        <span class="w-1.5 h-1.5 rounded-full
+                                            @if($event->type === 'flight') bg-sky-400
+                                            @elseif($event->type === 'visit') bg-emerald-400
+                                            @else bg-rose-400 @endif"></span>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+
+                {{-- Hour rows --}}
+                <div class="min-w-[800px]" style="max-height: 600px; overflow-y: auto;">
+                    @foreach($weekData['hours'] as $hour)
+                        <div class="grid grid-cols-8 border-b border-gray-50 min-h-[50px]">
+                            <div class="py-1 px-2 text-[11px] text-gray-400 text-right pr-3 pt-1">
+                                {{ str_pad($hour, 2, '0', STR_PAD_LEFT) }}:00
+                            </div>
+                            @foreach($weekData['days'] as $day)
+                                <div class="border-l border-gray-50 p-0.5 cursor-pointer hover:bg-indigo-50/30 transition-colors
+                                    {{ $day['isToday'] ? 'bg-indigo-50/30' : '' }}"
+                                    wire:click="openModal('{{ $day['date']->format('Y-m-d') }}')">
+                                    @foreach($day['events'] as $event)
+                                        @if($event->start_time->hour === $hour)
+                                            <div
+                                                wire:click.stop="{{ $event->created_by === $currentUserId ? 'editEvent('.$event->id.')' : '' }}"
+                                                class="text-[10px] px-1.5 py-0.5 rounded truncate font-medium mb-0.5
+                                                    {{ $event->created_by === $currentUserId ? 'cursor-pointer' : 'cursor-default' }}
+                                                    @if($event->type === 'flight') bg-sky-100 text-sky-700
+                                                    @elseif($event->type === 'visit') bg-emerald-100 text-emerald-700
+                                                    @else bg-rose-100 text-rose-700 @endif">
+                                                {{ $event->start_time->format('H:i') }} {{ $event->title }}
+                                            </div>
+                                        @endif
+                                    @endforeach
                                 </div>
                             @endforeach
                         </div>
+                    @endforeach
+                </div>
+            </div>
+
+        {{-- ======================== DAY VIEW ======================== --}}
+        @elseif($view === 'day')
+            <div class="p-4">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4">{{ $dayData['label'] }}</h3>
+
+                {{-- Day events summary --}}
+                @if($dayData['events']->isNotEmpty())
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        @foreach($dayData['events'] as $event)
+                            <div
+                                wire:click="{{ $event->created_by === $currentUserId ? 'editEvent('.$event->id.')' : '' }}"
+                                class="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium
+                                    {{ $event->created_by === $currentUserId ? 'cursor-pointer hover:shadow-md' : 'cursor-default' }}
+                                    @if($event->type === 'flight') bg-sky-100 text-sky-700
+                                    @elseif($event->type === 'visit') bg-emerald-100 text-emerald-700
+                                    @else bg-rose-100 text-rose-700 @endif">
+                                @if($event->type === 'flight') &#9992;
+                                @elseif($event->type === 'visit') &#10084;
+                                @else &#9733; @endif
+                                {{ $event->title }}
+                                <span class="opacity-60 text-xs">{{ $event->start_time->format('H:i') }}@if($event->end_time)&ndash;{{ $event->end_time->format('H:i') }}@endif</span>
+                            </div>
+                        @endforeach
                     </div>
                 @endif
-            @endforeach
-        </div>
+
+                {{-- Hourly timeline --}}
+                <div style="max-height: 600px; overflow-y: auto;">
+                    @foreach($dayData['hours'] as $hour)
+                        <div class="flex border-b border-gray-50 min-h-[50px] hover:bg-indigo-50/30 transition-colors cursor-pointer"
+                            wire:click="openModal('{{ $dayData['date']->format('Y-m-d') }}')">
+                            <div class="w-16 flex-shrink-0 py-1 text-right pr-3 text-xs text-gray-400 pt-1">
+                                {{ str_pad($hour, 2, '0', STR_PAD_LEFT) }}:00
+                            </div>
+                            <div class="flex-1 border-l border-gray-100 p-1">
+                                @foreach($dayData['events'] as $event)
+                                    @if($event->start_time->hour === $hour)
+                                        <div
+                                            wire:click.stop="{{ $event->created_by === $currentUserId ? 'editEvent('.$event->id.')' : '' }}"
+                                            class="text-xs px-3 py-2 rounded-lg font-medium mb-1
+                                                {{ $event->created_by === $currentUserId ? 'cursor-pointer hover:shadow-md' : 'cursor-default' }}
+                                                @if($event->type === 'flight') bg-sky-100 text-sky-700
+                                                @elseif($event->type === 'visit') bg-emerald-100 text-emerald-700
+                                                @else bg-rose-100 text-rose-700 @endif">
+                                            @if($event->type === 'flight') &#9992;
+                                            @elseif($event->type === 'visit') &#10084;
+                                            @else &#9733; @endif
+                                            {{ $event->title }}
+                                            <span class="opacity-60">{{ $event->start_time->format('H:i') }}@if($event->end_time) &ndash; {{ $event->end_time->format('H:i') }}@endif</span>
+                                            @if($event->created_by !== $currentUserId)
+                                                <span class="opacity-50 ml-1">&middot; {{ $event->creator->name }}</span>
+                                            @endif
+                                        </div>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
     </div>
 
     {{-- Bottom: Add + Upcoming --}}
@@ -253,7 +444,7 @@
 
                     {{-- End Time --}}
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Endzeit <span class="text-gray-400 font-normal">(optional)</span></label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Endzeit <span class="text-gray-400 font-normal">(optional, Standard: 3 Stunden)</span></label>
                         <input type="datetime-local" wire:model="end_time"
                             class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 text-gray-700" />
                         @error('end_time') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror

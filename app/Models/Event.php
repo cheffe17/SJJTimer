@@ -40,6 +40,7 @@ class Event extends Model
         'type',
         'shared',
         'title',
+        'location',
         'start_time',
         'end_time',
         'return_time',

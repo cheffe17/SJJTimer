@@ -10,6 +10,7 @@ class Calendar extends Component
 {
     // Form fields
     public string $title = '';
+    public string $location = '';
     public string $type = 'visit';
     public bool $shared = true;
     public string $start_time = '';
@@ -36,6 +37,7 @@ class Calendar extends Component
 
     protected $rules = [
         'title' => 'required|string|max:255',
+        'location' => 'nullable|string|max:255',
         'type' => 'required|in:visit,virtual_date,live_date,anniversary',
         'start_time' => 'required|date',
         'end_time' => 'nullable|date|after_or_equal:start_time',
@@ -144,6 +146,7 @@ class Calendar extends Component
 
         $this->editingEventId = $eventId;
         $this->title = $event->title;
+        $this->location = $event->location ?? '';
         $this->type = $event->type;
         $this->shared = $event->shared;
         $this->start_time = $event->start_time->format('Y-m-d\TH:i');
@@ -187,6 +190,7 @@ class Calendar extends Component
             'type' => $this->type,
             'shared' => $this->shared,
             'title' => $this->title,
+            'location' => $this->location ?: null,
             'start_time' => $startTime,
             'end_time' => $endTime,
             'tracking_start' => $this->type === Event::TYPE_VISIT ? $startTime : null,
@@ -274,6 +278,7 @@ class Calendar extends Component
     {
         $this->editingEventId = null;
         $this->title = '';
+        $this->location = '';
         $this->type = 'visit';
         $this->shared = true;
         $this->start_time = '';

@@ -30,7 +30,7 @@ class CountdownTimer extends Component
     {
         $now = now();
 
-        // Active event (happening now): start_time <= now AND end_time >= now
+        // Active event (happening now)
         $activeQuery = $this->baseQuery();
         if ($this->filterType) {
             $activeQuery->where('type', $this->filterType);
@@ -41,10 +41,9 @@ class CountdownTimer extends Component
             ->orderBy('start_time')
             ->first();
 
-        // Check if the active event is a visit with flights (stay period)
         $isStayActive = $activeEvent && $activeEvent->isVisitWithFlights();
 
-        // Next upcoming event (after now) — fresh query
+        // Next upcoming event — fresh query
         $nextQuery = $this->baseQuery();
         if ($this->filterType) {
             $nextQuery->where('type', $this->filterType);
@@ -57,11 +56,14 @@ class CountdownTimer extends Component
 
         $targetEvent = $activeEvent ?? $nextEvent;
 
-        // For visit with flights: when stay is active, countdown shows time until return_time
+        // Timestamps for client-side countdown (all in ms)
         $activeEndTimestamp = null;
         $activeStartTimestamp = null;
+        $location = null;
+
         if ($activeEvent) {
             $activeStartTimestamp = $activeEvent->start_time->getTimestampMs();
+            $location = $activeEvent->location;
             if ($isStayActive && $activeEvent->return_time) {
                 $activeEndTimestamp = $activeEvent->return_time->getTimestampMs();
             } else {
@@ -77,6 +79,18 @@ class CountdownTimer extends Component
             'activeEndTimestamp' => $activeEndTimestamp,
             'activeStartTimestamp' => $activeStartTimestamp,
             'isStayActive' => $isStayActive,
+            'location' => $location,
+            'nextEventTitle' => ($nextEvent && !$activeEvent) ? $nextEvent->title : null,
+            'nextEventType' => ($nextEvent && !$activeEvent) ? $nextEvent->type : null,
+            'nextEventLocation' => ($nextEvent && !$activeEvent) ? $nextEvent->location : null,
+            'nextEventDate' => ($nextEvent && !$activeEvent) ? $nextEvent->start_time->format('d.m.Y, H:i') : null,
+            'nextEventCreator' => ($nextEvent && !$activeEvent) ? $nextEvent->creator->name : null,
+            'activeEventTitle' => $activeEvent?->title,
+            'activeEventType' => $activeEvent?->type,
+            'activeEventDate' => $activeEvent?->start_time->format('d.m.Y, H:i'),
+            'activeEventEndDate' => $isStayActive && $activeEvent?->return_time
+                ? $activeEvent->return_time->format('d.m.Y, H:i')
+                : $activeEvent?->end_time?->format('H:i'),
         ]);
     }
 }

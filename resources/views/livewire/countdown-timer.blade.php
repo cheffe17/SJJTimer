@@ -111,11 +111,6 @@
 
                     {{-- Countdown boxes (remaining time) --}}
                     <div x-show="!finished" class="grid grid-cols-4 gap-3 mb-5">
-                        <template x-for="[['days','Tage'],['hours','Std'],['minutes','Min'],['seconds','Sek']]" :key="$el">
-                            <div></div>
-                        </template>
-                    </div>
-                    <div x-show="!finished" class="grid grid-cols-4 gap-3 mb-5">
                         @foreach(['days' => 'Tage', 'hours' => 'Stunden', 'minutes' => 'Minuten', 'seconds' => 'Sekunden'] as $var => $label)
                         <div class="text-center">
                             <div class="bg-gradient-to-b {{ $isStayActive ? 'from-green-700 to-green-900' : 'from-slate-800 to-slate-900' }} rounded-2xl p-3 shadow-lg {{ $var === 'seconds' ? 'relative overflow-hidden' : '' }}">
@@ -133,7 +128,7 @@
                     <div x-show="!finished">
                         <div class="flex justify-between text-xs text-gray-500 mb-1">
                             <span>{{ $isStayActive ? 'Noch zusammen' : 'Verbleibend' }}</span>
-                            <span x-text="(() => { const p = Math.round(progress); return p + '%'; })()"></span>
+                            <span x-text="Math.round(progress) + '%'"></span>
                         </div>
                         <div class="h-3 bg-gray-100 rounded-full overflow-hidden">
                             <div class="h-full rounded-full transition-all duration-1000

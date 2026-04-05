@@ -185,7 +185,7 @@ class Calendar extends Component
             : $startTime->copy()->addHours(3);
 
         $data = [
-            'couple_id' => $user->couple_id,
+            'couple_id' => $user->couple_id ?: null,
             'created_by' => $user->id,
             'type' => $this->type,
             'shared' => $this->shared,
@@ -231,7 +231,7 @@ class Calendar extends Component
 
             // Hinflug (3h duration)
             Event::create([
-                'couple_id' => $user->couple_id,
+                'couple_id' => $user->couple_id ?: null,
                 'created_by' => $user->id,
                 'parent_event_id' => $event->id,
                 'type' => Event::TYPE_VISIT,
@@ -243,7 +243,7 @@ class Calendar extends Component
 
             // Rückflug (3h duration)
             Event::create([
-                'couple_id' => $user->couple_id,
+                'couple_id' => $user->couple_id ?: null,
                 'created_by' => $user->id,
                 'parent_event_id' => $event->id,
                 'type' => Event::TYPE_VISIT,
@@ -341,8 +341,8 @@ class Calendar extends Component
         for ($i = 0; $i < 7; $i++) {
             $date = $startOfWeek->copy()->addDays($i);
             $dayEvents = $events->filter(function ($event) use ($date) {
-                $start = $event->start_time->startOfDay();
-                $end = $event->end_time ? $event->end_time->startOfDay() : $start;
+                $start = $event->start_time->copy()->startOfDay();
+                $end = $event->end_time ? $event->end_time->copy()->startOfDay() : $start;
                 return $date->between($start, $end);
             });
 
@@ -363,8 +363,8 @@ class Calendar extends Component
         $events = $this->getEventsWithRecurrences($date->copy()->startOfDay(), $date->copy()->endOfDay());
 
         $dayEvents = $events->filter(function ($event) use ($date) {
-            $start = $event->start_time->startOfDay();
-            $end = $event->end_time ? $event->end_time->startOfDay() : $start;
+            $start = $event->start_time->copy()->startOfDay();
+            $end = $event->end_time ? $event->end_time->copy()->startOfDay() : $start;
             return $date->between($start, $end);
         });
 
@@ -396,8 +396,8 @@ class Calendar extends Component
             for ($d = 1; $d <= $daysInMonth; $d++) {
                 $date = Carbon::create($this->currentYear, $m, $d);
                 $hasEvents = $events->contains(function ($event) use ($date) {
-                    $start = $event->start_time->startOfDay();
-                    $end = $event->end_time ? $event->end_time->startOfDay() : $start;
+                    $start = $event->start_time->copy()->startOfDay();
+                    $end = $event->end_time ? $event->end_time->copy()->startOfDay() : $start;
                     return $date->between($start, $end);
                 });
 
@@ -474,8 +474,8 @@ class Calendar extends Component
         for ($day = 1; $day <= $daysInMonth; $day++) {
             $date = Carbon::create($this->currentYear, $this->currentMonth, $day);
             $dayEvents = $events->filter(function ($event) use ($date) {
-                $start = $event->start_time->startOfDay();
-                $end = $event->end_time ? $event->end_time->startOfDay() : $start;
+                $start = $event->start_time->copy()->startOfDay();
+                $end = $event->end_time ? $event->end_time->copy()->startOfDay() : $start;
                 return $date->between($start, $end);
             });
 

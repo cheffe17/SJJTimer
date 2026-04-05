@@ -42,13 +42,10 @@
                 </div>
                 <div class="flex flex-wrap gap-2">
                     @foreach($activeEvents as $event)
+                        @php $color = \App\Models\Event::typeColor($event->type); @endphp
                         <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium
-                            @if($event->type === 'flight') bg-sky-100 text-sky-700
-                            @elseif($event->type === 'visit') bg-emerald-100 text-emerald-700
-                            @else bg-rose-100 text-rose-700 @endif">
-                            @if($event->type === 'flight') &#9992;
-                            @elseif($event->type === 'visit') &#10084;
-                            @else &#9733; @endif
+                            bg-{{ $color }}-100 text-{{ $color }}-700">
+                            {!! \App\Models\Event::typeIcon($event->type) !!}
                             {{ $event->title }}
                             <span class="opacity-60">{{ $event->start_time->format('H:i') }}&ndash;{{ $event->end_time->format('H:i') }}</span>
                         </div>
@@ -91,14 +88,12 @@
 
         {{-- ======================== MONTH VIEW ======================== --}}
         @elseif($view === 'month')
-            {{-- Weekday Headers --}}
             <div class="grid grid-cols-7 bg-gray-50 border-b border-gray-100">
                 @foreach(['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'] as $day)
                     <div class="py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">{{ $day }}</div>
                 @endforeach
             </div>
 
-            {{-- Calendar Grid --}}
             <div class="grid grid-cols-7">
                 @foreach($calendarDays as $calDay)
                     @if($calDay === null)
@@ -117,26 +112,24 @@
                             </span>
                             <div class="mt-1 space-y-1">
                                 @foreach($calDay['events'] as $event)
+                                    @php $color = \App\Models\Event::typeColor($event->type); @endphp
                                     <div
                                         wire:click.stop="{{ $event->created_by === $currentUserId ? 'editEvent('.$event->id.')' : '' }}"
                                         class="text-xs px-2 py-1 rounded-lg truncate font-medium transition-all duration-200 hover:shadow-sm relative
                                             {{ $event->created_by === $currentUserId ? 'cursor-pointer hover:scale-[1.02]' : 'cursor-default' }}
-                                            @if($event->type === 'flight') bg-sky-100 text-sky-700
-                                            @elseif($event->type === 'visit') bg-emerald-100 text-emerald-700
-                                            @else bg-rose-100 text-rose-700
-                                            @endif"
-                                        title="{{ $event->title }} — {{ $event->creator->name }}{{ $event->shared ? ' & ' . ($event->created_by === $currentUserId ? ($partnerName ?? 'Partner') : 'du') : '' }}"
+                                            bg-{{ $color }}-100 text-{{ $color }}-700"
+                                        title="{{ $event->title }} — {{ $event->creator->name }}"
                                     >
-                                        @if($event->type === 'flight') &#9992;
-                                        @elseif($event->type === 'visit') &#10084;
-                                        @else &#9733;
-                                        @endif
+                                        {!! \App\Models\Event::typeIcon($event->type) !!}
                                         {{ $event->title }}
                                         @if($event->created_by !== $currentUserId)
                                             <span class="text-[10px] opacity-60">&middot; {{ $event->creator->name }}</span>
                                         @endif
                                         @if($event->shared)
                                             <span class="text-[10px] opacity-50">&#128107;</span>
+                                        @endif
+                                        @if($event->isRecurring())
+                                            <span class="text-[10px] opacity-50">&#128260;</span>
                                         @endif
                                     </div>
                                 @endforeach
@@ -149,7 +142,6 @@
         {{-- ======================== WEEK VIEW ======================== --}}
         @elseif($view === 'week')
             <div class="overflow-x-auto">
-                {{-- Day headers --}}
                 <div class="grid grid-cols-8 border-b border-gray-100 min-w-[800px]">
                     <div class="py-3 px-2 text-xs text-gray-400 font-medium"></div>
                     @foreach($weekData['days'] as $day)
@@ -161,10 +153,8 @@
                             @if($day['events']->isNotEmpty())
                                 <div class="flex justify-center gap-0.5 mt-1">
                                     @foreach($day['events']->take(3) as $event)
-                                        <span class="w-1.5 h-1.5 rounded-full
-                                            @if($event->type === 'flight') bg-sky-400
-                                            @elseif($event->type === 'visit') bg-emerald-400
-                                            @else bg-rose-400 @endif"></span>
+                                        @php $color = \App\Models\Event::typeColor($event->type); @endphp
+                                        <span class="w-1.5 h-1.5 rounded-full bg-{{ $color }}-400"></span>
                                     @endforeach
                                 </div>
                             @endif
@@ -172,7 +162,6 @@
                     @endforeach
                 </div>
 
-                {{-- Hour rows --}}
                 <div class="min-w-[800px]" style="max-height: 600px; overflow-y: auto;">
                     @foreach($weekData['hours'] as $hour)
                         <div class="grid grid-cols-8 border-b border-gray-50 min-h-[50px]">
@@ -185,13 +174,12 @@
                                     wire:click="openModal('{{ $day['date']->format('Y-m-d') }}')">
                                     @foreach($day['events'] as $event)
                                         @if($event->start_time->hour === $hour)
+                                            @php $color = \App\Models\Event::typeColor($event->type); @endphp
                                             <div
                                                 wire:click.stop="{{ $event->created_by === $currentUserId ? 'editEvent('.$event->id.')' : '' }}"
                                                 class="text-[10px] px-1.5 py-0.5 rounded truncate font-medium mb-0.5
                                                     {{ $event->created_by === $currentUserId ? 'cursor-pointer' : 'cursor-default' }}
-                                                    @if($event->type === 'flight') bg-sky-100 text-sky-700
-                                                    @elseif($event->type === 'visit') bg-emerald-100 text-emerald-700
-                                                    @else bg-rose-100 text-rose-700 @endif">
+                                                    bg-{{ $color }}-100 text-{{ $color }}-700">
                                                 {{ $event->start_time->format('H:i') }} {{ $event->title }}
                                             </div>
                                         @endif
@@ -208,20 +196,16 @@
             <div class="p-4">
                 <h3 class="text-lg font-semibold text-gray-700 mb-4">{{ $dayData['label'] }}</h3>
 
-                {{-- Day events summary --}}
                 @if($dayData['events']->isNotEmpty())
                     <div class="flex flex-wrap gap-2 mb-4">
                         @foreach($dayData['events'] as $event)
+                            @php $color = \App\Models\Event::typeColor($event->type); @endphp
                             <div
                                 wire:click="{{ $event->created_by === $currentUserId ? 'editEvent('.$event->id.')' : '' }}"
                                 class="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium
                                     {{ $event->created_by === $currentUserId ? 'cursor-pointer hover:shadow-md' : 'cursor-default' }}
-                                    @if($event->type === 'flight') bg-sky-100 text-sky-700
-                                    @elseif($event->type === 'visit') bg-emerald-100 text-emerald-700
-                                    @else bg-rose-100 text-rose-700 @endif">
-                                @if($event->type === 'flight') &#9992;
-                                @elseif($event->type === 'visit') &#10084;
-                                @else &#9733; @endif
+                                    bg-{{ $color }}-100 text-{{ $color }}-700">
+                                {!! \App\Models\Event::typeIcon($event->type) !!}
                                 {{ $event->title }}
                                 <span class="opacity-60 text-xs">{{ $event->start_time->format('H:i') }}@if($event->end_time)&ndash;{{ $event->end_time->format('H:i') }}@endif</span>
                             </div>
@@ -229,7 +213,6 @@
                     </div>
                 @endif
 
-                {{-- Hourly timeline --}}
                 <div style="max-height: 600px; overflow-y: auto;">
                     @foreach($dayData['hours'] as $hour)
                         <div class="flex border-b border-gray-50 min-h-[50px] hover:bg-indigo-50/30 transition-colors cursor-pointer"
@@ -240,16 +223,13 @@
                             <div class="flex-1 border-l border-gray-100 p-1">
                                 @foreach($dayData['events'] as $event)
                                     @if($event->start_time->hour === $hour)
+                                        @php $color = \App\Models\Event::typeColor($event->type); @endphp
                                         <div
                                             wire:click.stop="{{ $event->created_by === $currentUserId ? 'editEvent('.$event->id.')' : '' }}"
                                             class="text-xs px-3 py-2 rounded-lg font-medium mb-1
                                                 {{ $event->created_by === $currentUserId ? 'cursor-pointer hover:shadow-md' : 'cursor-default' }}
-                                                @if($event->type === 'flight') bg-sky-100 text-sky-700
-                                                @elseif($event->type === 'visit') bg-emerald-100 text-emerald-700
-                                                @else bg-rose-100 text-rose-700 @endif">
-                                            @if($event->type === 'flight') &#9992;
-                                            @elseif($event->type === 'visit') &#10084;
-                                            @else &#9733; @endif
+                                                bg-{{ $color }}-100 text-{{ $color }}-700">
+                                            {!! \App\Models\Event::typeIcon($event->type) !!}
                                             {{ $event->title }}
                                             <span class="opacity-60">{{ $event->start_time->format('H:i') }}@if($event->end_time) &ndash; {{ $event->end_time->format('H:i') }}@endif</span>
                                             @if($event->created_by !== $currentUserId)
@@ -303,17 +283,12 @@
                 @else
                     <div class="space-y-3">
                         @foreach($upcomingEvents as $event)
+                            @php $color = \App\Models\Event::typeColor($event->type); @endphp
                             <div class="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all duration-200 group">
                                 <div class="flex items-center space-x-4">
                                     <div class="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-lg
-                                        @if($event->type === 'flight') bg-sky-100 text-sky-600
-                                        @elseif($event->type === 'visit') bg-emerald-100 text-emerald-600
-                                        @else bg-rose-100 text-rose-600
-                                        @endif">
-                                        @if($event->type === 'flight') &#9992;
-                                        @elseif($event->type === 'visit') &#10084;
-                                        @else &#9733;
-                                        @endif
+                                        bg-{{ $color }}-100 text-{{ $color }}-600">
+                                        {!! \App\Models\Event::typeIcon($event->type) !!}
                                     </div>
                                     <div>
                                         <p class="font-semibold text-gray-800">{{ $event->title }}</p>
@@ -333,6 +308,12 @@
                                                 </span>
                                             @else
                                                 <span class="text-xs text-gray-400">Solo</span>
+                                            @endif
+                                            @if($event->isRecurring())
+                                                <span class="text-xs text-indigo-400">&#128260; Serie</span>
+                                            @endif
+                                            @if($event->isVisitWithFlights())
+                                                <span class="text-xs text-sky-400">&#9992; mit Flügen</span>
                                             @endif
                                         </div>
                                     </div>
@@ -363,12 +344,12 @@
         </div>
     </div>
 
-    {{-- Modal --}}
+    {{-- ======================== MODAL ======================== --}}
     @if($showModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4" x-data x-init="$el.querySelector('input[type=text]')?.focus()">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4" x-data="{ showFlightFields: @entangle('type').live === 'visit' }" x-init="$el.querySelector('input[type=text]')?.focus()">
             <div wire:click="closeModal" class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"></div>
 
-            <div class="relative bg-white rounded-3xl shadow-2xl shadow-indigo-200/50 w-full max-w-lg">
+            <div class="relative bg-white rounded-3xl shadow-2xl shadow-indigo-200/50 w-full max-w-lg max-h-[90vh] overflow-y-auto">
                 <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-t-3xl px-6 py-5">
                     <h3 class="text-lg font-bold text-white">
                         {{ $editingEventId ? 'Event bearbeiten' : 'Neues Event erstellen' }}
@@ -379,31 +360,37 @@
                     {{-- Title --}}
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Titel</label>
-                        <input type="text" wire:model="title" placeholder="z.B. Flug nach Wien"
+                        <input type="text" wire:model="title" placeholder="z.B. Besuch in Wien"
                             class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 text-gray-700 placeholder-gray-400" />
                         @error('title') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
                     </div>
 
                     {{-- Type --}}
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Typ</label>
-                        <div class="grid grid-cols-3 gap-3">
-                            <label class="cursor-pointer">
-                                <input type="radio" wire:model.live="type" value="flight" class="peer hidden" />
-                                <div class="peer-checked:border-sky-400 peer-checked:bg-sky-50 peer-checked:text-sky-700 border-2 border-gray-200 rounded-xl p-3 text-center text-sm font-medium text-gray-500 transition-all duration-200 hover:border-gray-300">
-                                    <div class="text-xl mb-1">&#9992;</div>Flug
-                                </div>
-                            </label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Kategorie</label>
+                        <div class="grid grid-cols-2 gap-3">
                             <label class="cursor-pointer">
                                 <input type="radio" wire:model.live="type" value="visit" class="peer hidden" />
-                                <div class="peer-checked:border-emerald-400 peer-checked:bg-emerald-50 peer-checked:text-emerald-700 border-2 border-gray-200 rounded-xl p-3 text-center text-sm font-medium text-gray-500 transition-all duration-200 hover:border-gray-300">
-                                    <div class="text-xl mb-1">&#10084;</div>Besuch
+                                <div class="peer-checked:border-sky-400 peer-checked:bg-sky-50 peer-checked:text-sky-700 border-2 border-gray-200 rounded-xl p-3 text-center text-sm font-medium text-gray-500 transition-all duration-200 hover:border-gray-300">
+                                    <div class="text-xl mb-1">&#9992;</div>Besuch
                                 </div>
                             </label>
                             <label class="cursor-pointer">
-                                <input type="radio" wire:model.live="type" value="date" class="peer hidden" />
+                                <input type="radio" wire:model.live="type" value="virtual_date" class="peer hidden" />
+                                <div class="peer-checked:border-violet-400 peer-checked:bg-violet-50 peer-checked:text-violet-700 border-2 border-gray-200 rounded-xl p-3 text-center text-sm font-medium text-gray-500 transition-all duration-200 hover:border-gray-300">
+                                    <div class="text-xl mb-1">&#128187;</div>Virtuelles Date
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" wire:model.live="type" value="live_date" class="peer hidden" />
                                 <div class="peer-checked:border-rose-400 peer-checked:bg-rose-50 peer-checked:text-rose-700 border-2 border-gray-200 rounded-xl p-3 text-center text-sm font-medium text-gray-500 transition-all duration-200 hover:border-gray-300">
-                                    <div class="text-xl mb-1">&#9733;</div>Date
+                                    <div class="text-xl mb-1">&#10084;</div>Live Date
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" wire:model.live="type" value="anniversary" class="peer hidden" />
+                                <div class="peer-checked:border-amber-400 peer-checked:bg-amber-50 peer-checked:text-amber-700 border-2 border-gray-200 rounded-xl p-3 text-center text-sm font-medium text-gray-500 transition-all duration-200 hover:border-gray-300">
+                                    <div class="text-xl mb-1">&#127874;</div>Jahrestag
                                 </div>
                             </label>
                         </div>
@@ -434,20 +421,90 @@
                         </div>
                     @endif
 
-                    {{-- Start Time --}}
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Startzeit</label>
-                        <input type="datetime-local" wire:model="start_time"
-                            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 text-gray-700" />
-                        @error('start_time') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
-                    </div>
+                    {{-- Flight fields (only for visit type) --}}
+                    @if($type === 'visit')
+                        <div class="border-2 border-sky-200 bg-sky-50/50 rounded-xl p-4 space-y-4">
+                            <div class="flex items-center gap-2 text-sky-700 text-sm font-semibold">
+                                <span>&#9992;</span> Flugdaten <span class="text-xs font-normal text-sky-500">(optional)</span>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-sky-700 mb-1">Hinflug</label>
+                                <input type="datetime-local" wire:model="outbound_flight_time"
+                                    class="w-full px-3 py-2 rounded-lg border border-sky-200 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition-all text-sm text-gray-700" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-sky-700 mb-1">Rückflug</label>
+                                <input type="datetime-local" wire:model="return_flight_time"
+                                    class="w-full px-3 py-2 rounded-lg border border-sky-200 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition-all text-sm text-gray-700" />
+                            </div>
+                            <p class="text-[11px] text-sky-500">
+                                Der Zeitraum zwischen Hin- und Rückflug wird automatisch als Besuchszeit eingetragen. Der Countdown wechselt bei Ankunft auf die verbleibende Besuchszeit.
+                            </p>
+                        </div>
+                    @endif
 
-                    {{-- End Time --}}
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Endzeit <span class="text-gray-400 font-normal">(optional, Standard: 3 Stunden)</span></label>
-                        <input type="datetime-local" wire:model="end_time"
-                            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 text-gray-700" />
-                        @error('end_time') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                    {{-- Standard Start/End (hidden when flight fields are used) --}}
+                    @if($type !== 'visit' || !$outbound_flight_time)
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Startzeit</label>
+                            <input type="datetime-local" wire:model="start_time"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 text-gray-700" />
+                            @error('start_time') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Endzeit <span class="text-gray-400 font-normal">(optional, Standard: 3 Stunden)</span></label>
+                            <input type="datetime-local" wire:model="end_time"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 text-gray-700" />
+                            @error('end_time') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                        </div>
+                    @endif
+
+                    {{-- Recurring --}}
+                    <div class="border-2 border-indigo-200 bg-indigo-50/50 rounded-xl p-4 space-y-3">
+                        <div class="flex items-center gap-2 text-indigo-700 text-sm font-semibold">
+                            <span>&#128260;</span> Serientermin <span class="text-xs font-normal text-indigo-500">(optional)</span>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-indigo-700 mb-1">Wiederholung</label>
+                            <select wire:model.live="recurrence_rule"
+                                class="w-full px-3 py-2 rounded-lg border border-indigo-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all text-sm text-gray-700 bg-white">
+                                <option value="">Keine Wiederholung</option>
+                                <option value="weekly">Wöchentlich</option>
+                                <option value="biweekly">Alle 2 Wochen</option>
+                                <option value="monthly">Monatlich</option>
+                            </select>
+                        </div>
+
+                        @if($recurrence_rule)
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-indigo-700 mb-1">Wochentag</label>
+                                    <select wire:model="recurrence_day"
+                                        class="w-full px-3 py-2 rounded-lg border border-indigo-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all text-sm text-gray-700 bg-white">
+                                        <option value="">—</option>
+                                        <option value="monday">Montag</option>
+                                        <option value="tuesday">Dienstag</option>
+                                        <option value="wednesday">Mittwoch</option>
+                                        <option value="thursday">Donnerstag</option>
+                                        <option value="friday">Freitag</option>
+                                        <option value="saturday">Samstag</option>
+                                        <option value="sunday">Sonntag</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-indigo-700 mb-1">Uhrzeit</label>
+                                    <input type="time" wire:model="recurrence_time"
+                                        class="w-full px-3 py-2 rounded-lg border border-indigo-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all text-sm text-gray-700" />
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-indigo-700 mb-1">Wiederholen bis <span class="text-indigo-400 font-normal">(optional)</span></label>
+                                <input type="date" wire:model="recurrence_until"
+                                    class="w-full px-3 py-2 rounded-lg border border-indigo-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all text-sm text-gray-700" />
+                            </div>
+                        @endif
                     </div>
 
                     {{-- Actions --}}

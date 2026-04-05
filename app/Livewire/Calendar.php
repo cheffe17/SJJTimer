@@ -4,11 +4,11 @@ namespace App\Livewire;
 
 use App\Models\Event;
 use Carbon\Carbon;
-use Carbon\CarbonPeriod;
 use Livewire\Component;
 
 class Calendar extends Component
 {
+    // Form fields
     public string $title = '';
     public string $type = 'visit';
     public bool $shared = true;
@@ -17,17 +17,34 @@ class Calendar extends Component
     public bool $showModal = false;
     public ?int $editingEventId = null;
 
+    // Flight + Stay logic
+    public string $outbound_flight_time = '';
+    public string $return_flight_time = '';
+
+    // Recurring fields
+    public string $recurrence_rule = '';
+    public string $recurrence_day = '';
+    public string $recurrence_time = '';
+    public string $recurrence_until = '';
+
+    // Calendar navigation
     public int $currentMonth;
     public int $currentYear;
     public int $currentWeek;
     public int $currentDay;
-    public string $view = 'month'; // year, month, week, day
+    public string $view = 'month';
 
     protected $rules = [
         'title' => 'required|string|max:255',
-        'type' => 'required|in:flight,visit,date',
+        'type' => 'required|in:visit,virtual_date,live_date,anniversary',
         'start_time' => 'required|date',
         'end_time' => 'nullable|date|after_or_equal:start_time',
+        'outbound_flight_time' => 'nullable|date',
+        'return_flight_time' => 'nullable|date|after_or_equal:outbound_flight_time',
+        'recurrence_rule' => 'nullable|in:weekly,biweekly,monthly',
+        'recurrence_day' => 'nullable|string',
+        'recurrence_time' => 'nullable|string',
+        'recurrence_until' => 'nullable|date',
     ];
 
     public function mount(): void
@@ -106,7 +123,8 @@ class Calendar extends Component
 
     public function updatedType(): void
     {
-        $this->shared = $this->type !== 'flight';
+        // Visits are shared by default, others too
+        $this->shared = true;
     }
 
     public function openModal(string $date = ''): void
@@ -130,11 +148,30 @@ class Calendar extends Component
         $this->shared = $event->shared;
         $this->start_time = $event->start_time->format('Y-m-d\TH:i');
         $this->end_time = $event->end_time?->format('Y-m-d\TH:i') ?? '';
+
+        // Flight logic
+        if ($event->type === Event::TYPE_VISIT && $event->return_time) {
+            $this->outbound_flight_time = $event->start_time->format('Y-m-d\TH:i');
+            $this->return_flight_time = $event->return_time->format('Y-m-d\TH:i');
+        }
+
+        // Recurring
+        $this->recurrence_rule = $event->recurrence_rule ?? '';
+        $this->recurrence_day = $event->recurrence_day ?? '';
+        $this->recurrence_time = $event->recurrence_time ? substr($event->recurrence_time, 0, 5) : '';
+        $this->recurrence_until = $event->recurrence_until?->format('Y-m-d') ?? '';
+
         $this->showModal = true;
     }
 
     public function save(): void
     {
+        // If visit with flight data, use outbound as start_time for validation
+        if ($this->type === Event::TYPE_VISIT && $this->outbound_flight_time && $this->return_flight_time) {
+            $this->start_time = $this->outbound_flight_time;
+            $this->end_time = $this->return_flight_time;
+        }
+
         $this->validate();
 
         $user = auth()->user();
@@ -152,16 +189,65 @@ class Calendar extends Component
             'title' => $this->title,
             'start_time' => $startTime,
             'end_time' => $endTime,
-            'tracking_start' => $this->type === 'visit' ? $startTime : null,
+            'tracking_start' => $this->type === Event::TYPE_VISIT ? $startTime : null,
+            'recurrence_rule' => $this->recurrence_rule ?: null,
+            'recurrence_day' => $this->recurrence_day ?: null,
+            'recurrence_time' => $this->recurrence_time ?: null,
+            'recurrence_until' => $this->recurrence_until ?: null,
         ];
+
+        // Visit with flight logic: outbound + return flights
+        if ($this->type === Event::TYPE_VISIT && $this->outbound_flight_time && $this->return_flight_time) {
+            $outbound = Carbon::parse($this->outbound_flight_time)->utc();
+            $return = Carbon::parse($this->return_flight_time)->utc();
+
+            $data['start_time'] = $outbound;
+            $data['end_time'] = $return;
+            $data['return_time'] = $return;
+            $data['tracking_start'] = $outbound;
+        }
 
         if ($this->editingEventId) {
             $event = Event::where('id', $this->editingEventId)
                 ->where('created_by', $user->id)
                 ->first();
-            $event?->update($data);
+            if ($event) {
+                $event->update($data);
+                // Delete old child events (auto-generated flights)
+                $event->childEvents()->delete();
+            }
         } else {
-            Event::create($data);
+            $event = Event::create($data);
+        }
+
+        // Auto-create child flight events for visit with flights
+        if ($event && $this->type === Event::TYPE_VISIT && $this->outbound_flight_time && $this->return_flight_time) {
+            $outbound = Carbon::parse($this->outbound_flight_time)->utc();
+            $return = Carbon::parse($this->return_flight_time)->utc();
+
+            // Hinflug (3h duration)
+            Event::create([
+                'couple_id' => $user->couple_id,
+                'created_by' => $user->id,
+                'parent_event_id' => $event->id,
+                'type' => Event::TYPE_VISIT,
+                'shared' => true,
+                'title' => '✈ Hinflug: ' . $this->title,
+                'start_time' => $outbound,
+                'end_time' => $outbound->copy()->addHours(3),
+            ]);
+
+            // Rückflug (3h duration)
+            Event::create([
+                'couple_id' => $user->couple_id,
+                'created_by' => $user->id,
+                'parent_event_id' => $event->id,
+                'type' => Event::TYPE_VISIT,
+                'shared' => true,
+                'title' => '✈ Rückflug: ' . $this->title,
+                'start_time' => $return,
+                'end_time' => $return->copy()->addHours(3),
+            ]);
         }
 
         $this->closeModal();
@@ -170,6 +256,7 @@ class Calendar extends Component
 
     public function deleteEvent(int $eventId): void
     {
+        // Cascade: child events deleted via DB constraint
         Event::where('id', $eventId)
             ->where('created_by', auth()->id())
             ->delete();
@@ -191,6 +278,12 @@ class Calendar extends Component
         $this->shared = true;
         $this->start_time = '';
         $this->end_time = '';
+        $this->outbound_flight_time = '';
+        $this->return_flight_time = '';
+        $this->recurrence_rule = '';
+        $this->recurrence_day = '';
+        $this->recurrence_time = '';
+        $this->recurrence_until = '';
         $this->resetValidation();
     }
 
@@ -209,11 +302,34 @@ class Calendar extends Component
         ->get();
     }
 
+    /**
+     * Get all events including recurring occurrences for a date range.
+     */
+    private function getEventsWithRecurrences(Carbon $from, Carbon $to)
+    {
+        $events = $this->getEvents();
+        $allEvents = collect();
+
+        foreach ($events as $event) {
+            $allEvents->push($event);
+
+            if ($event->isRecurring()) {
+                $occurrences = $event->generateOccurrences($from, $to);
+                foreach ($occurrences as $occurrence) {
+                    $allEvents->push($occurrence);
+                }
+            }
+        }
+
+        return $allEvents->sortBy('start_time');
+    }
+
     private function getWeekDays(): array
     {
         $baseDate = Carbon::create($this->currentYear, $this->currentMonth, $this->currentDay);
         $startOfWeek = $baseDate->copy()->startOfWeek(Carbon::MONDAY);
-        $events = $this->getEvents();
+        $endOfWeek = $startOfWeek->copy()->endOfWeek(Carbon::SUNDAY);
+        $events = $this->getEventsWithRecurrences($startOfWeek, $endOfWeek);
         $hours = range(0, 23);
         $days = [];
 
@@ -239,7 +355,7 @@ class Calendar extends Component
     private function getDayEvents(): array
     {
         $date = Carbon::create($this->currentYear, $this->currentMonth, $this->currentDay);
-        $events = $this->getEvents();
+        $events = $this->getEventsWithRecurrences($date->copy()->startOfDay(), $date->copy()->endOfDay());
 
         $dayEvents = $events->filter(function ($event) use ($date) {
             $start = $event->start_time->startOfDay();
@@ -257,7 +373,9 @@ class Calendar extends Component
 
     private function getYearMonths(): array
     {
-        $events = $this->getEvents();
+        $from = Carbon::create($this->currentYear, 1, 1);
+        $to = Carbon::create($this->currentYear, 12, 31);
+        $events = $this->getEventsWithRecurrences($from, $to);
         $months = [];
 
         for ($m = 1; $m <= 12; $m++) {
@@ -301,13 +419,15 @@ class Calendar extends Component
         $partnerName = auth()->user()->couple_id ? auth()->user()->partner()?->name : null;
         $currentUserId = auth()->id();
 
-        // Active events (happening right now)
-        $now = now();
-        $activeEvents = $events->filter(function ($event) use ($now) {
-            return $event->start_time->lte($now) && $event->end_time && $event->end_time->gte($now);
-        });
+        // For month view, include recurring occurrences
+        $monthStart = Carbon::create($this->currentYear, $this->currentMonth, 1)->startOfMonth();
+        $monthEnd = $monthStart->copy()->endOfMonth();
+        $allEvents = $this->getEventsWithRecurrences($monthStart, $monthEnd);
 
-        // Upcoming events
+        // Active events (happening right now)
+        $activeEvents = $allEvents->filter(fn ($event) => $event->isActive());
+
+        // Upcoming events (non-recurring base events only)
         $upcomingEvents = $events->filter(fn ($e) => $e->start_time->isFuture())->take(5);
 
         // View-specific data
@@ -315,7 +435,7 @@ class Calendar extends Component
             'year' => ['yearMonths' => $this->getYearMonths()],
             'week' => ['weekData' => $this->getWeekDays()],
             'day' => ['dayData' => $this->getDayEvents()],
-            default => ['calendarDays' => $this->buildMonthDays($events)],
+            default => ['calendarDays' => $this->buildMonthDays($allEvents)],
         };
 
         $periodLabel = match ($this->view) {

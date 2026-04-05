@@ -10,62 +10,69 @@
                     Countdown
                 </h2>
                 <span class="text-white/80 text-sm">
-                    @if($activeEvent) Gerade aktiv @elseif($nextEvent) bis zum nächsten Event @endif
+                    @if($activeEvent)
+                        @if($isStayActive) Besuchszeit @else Gerade aktiv @endif
+                    @elseif($nextEvent)
+                        bis zum nächsten Event
+                    @endif
                 </span>
             </div>
         </div>
 
         {{-- Filter --}}
-        <div class="px-6 pt-4 flex items-center gap-2">
+        <div class="px-6 pt-4 flex items-center gap-2 flex-wrap">
             <span class="text-xs text-gray-400 mr-1">Filter:</span>
-            <button wire:click="setFilter('flight')"
-                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200
-                    {{ $filterType === 'flight' ? 'bg-sky-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-sky-50 hover:text-sky-600' }}">
-                &#9992; Flug
-            </button>
-            <button wire:click="setFilter('visit')"
-                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200
-                    {{ $filterType === 'visit' ? 'bg-emerald-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-emerald-50 hover:text-emerald-600' }}">
-                &#10084; Besuch
-            </button>
-            <button wire:click="setFilter('date')"
-                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200
-                    {{ $filterType === 'date' ? 'bg-rose-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-rose-50 hover:text-rose-600' }}">
-                &#9733; Date
-            </button>
+            @php
+                $filters = [
+                    'visit' => ['icon' => '&#9992;', 'label' => 'Besuche', 'color' => 'sky'],
+                    'virtual_date' => ['icon' => '&#128187;', 'label' => 'Virtuell', 'color' => 'violet'],
+                    'live_date' => ['icon' => '&#10084;', 'label' => 'Live Date', 'color' => 'rose'],
+                    'anniversary' => ['icon' => '&#127874;', 'label' => 'Jahrestag', 'color' => 'amber'],
+                ];
+            @endphp
+            @foreach($filters as $filterKey => $filter)
+                <button wire:click="setFilter('{{ $filterKey }}')"
+                    class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200
+                        {{ $filterType === $filterKey
+                            ? 'bg-' . $filter['color'] . '-500 text-white shadow-md'
+                            : 'bg-gray-100 text-gray-500 hover:bg-' . $filter['color'] . '-50 hover:text-' . $filter['color'] . '-600' }}">
+                    {!! $filter['icon'] !!} {{ $filter['label'] }}
+                </button>
+            @endforeach
         </div>
 
         <div class="p-6">
             @if($activeEvent)
                 {{-- ACTIVE EVENT --}}
                 <div class="text-center mb-6">
-                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-emerald-100 text-emerald-700 animate-pulse">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                        AKTIV
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
+                        {{ $isStayActive ? 'bg-green-100 text-green-700' : 'bg-emerald-100 text-emerald-700' }} animate-pulse">
+                        <span class="w-2 h-2 rounded-full {{ $isStayActive ? 'bg-green-500' : 'bg-emerald-500' }}"></span>
+                        {{ $isStayActive ? 'ZUSAMMEN' : 'AKTIV' }}
                     </div>
+                    @php $color = \App\Models\Event::typeColor($activeEvent->type); @endphp
                     <div class="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
-                        @if($activeEvent->type === 'flight') bg-sky-100 text-sky-700
-                        @elseif($activeEvent->type === 'visit') bg-emerald-100 text-emerald-700
-                        @else bg-rose-100 text-rose-700 @endif">
-                        @if($activeEvent->type === 'flight') &#9992;
-                        @elseif($activeEvent->type === 'visit') &#10084;
-                        @else &#9733; @endif
+                        bg-{{ $color }}-100 text-{{ $color }}-700">
+                        {!! \App\Models\Event::typeIcon($activeEvent->type) !!}
                         {{ $activeEvent->title }}
                     </div>
                     <p class="text-sm text-gray-500 mt-2">
-                        {{ $activeEvent->start_time->format('d.m.Y, H:i') }} &mdash; {{ $activeEvent->end_time->format('H:i') }} Uhr
+                        {{ $activeEvent->start_time->format('d.m.Y, H:i') }}
+                        &mdash;
+                        @if($isStayActive && $activeEvent->return_time)
+                            {{ $activeEvent->return_time->format('d.m.Y, H:i') }} Uhr
+                            <span class="text-xs text-gray-400">(Rückflug)</span>
+                        @else
+                            {{ $activeEvent->end_time->format('H:i') }} Uhr
+                        @endif
                     </p>
                 </div>
 
                 {{-- Active Progress --}}
-                @php
-                    $aStart = $activeEvent->start_time->getTimestampMs();
-                    $aEnd = $activeEvent->end_time->getTimestampMs();
-                @endphp
                 <div
                     x-data="{
-                        start: {{ $aStart }},
-                        end: {{ $aEnd }},
+                        start: {{ $activeStartTimestamp }},
+                        end: {{ $activeEndTimestamp }},
                         progress: 0,
                         remaining: '',
                         tick() {
@@ -74,20 +81,33 @@
                             const elapsed = now - this.start;
                             this.progress = Math.min(100, Math.max(0, (elapsed / total) * 100));
                             const left = Math.max(0, this.end - now);
-                            const h = Math.floor(left / 3600000);
+                            if (left <= 0) {
+                                this.remaining = '00:00:00';
+                                $wire.$refresh();
+                                return;
+                            }
+                            const d = Math.floor(left / 86400000);
+                            const h = Math.floor((left % 86400000) / 3600000);
                             const m = Math.floor((left % 3600000) / 60000);
                             const s = Math.floor((left % 60000) / 1000);
-                            this.remaining = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+                            if (d > 0) {
+                                this.remaining = d + 'T ' + String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+                            } else {
+                                this.remaining = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+                            }
                         },
                         init() { this.tick(); setInterval(() => this.tick(), 1000); }
                     }"
                 >
                     <div class="flex justify-between text-xs text-gray-500 mb-1">
-                        <span>Verbleibend</span>
+                        <span>{{ $isStayActive ? 'Noch zusammen' : 'Verbleibend' }}</span>
                         <span x-text="remaining"></span>
                     </div>
                     <div class="h-3 bg-gray-100 rounded-full overflow-hidden">
-                        <div class="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-1000"
+                        <div class="h-full rounded-full transition-all duration-1000
+                            {{ $isStayActive
+                                ? 'bg-gradient-to-r from-green-400 to-emerald-500'
+                                : 'bg-gradient-to-r from-emerald-400 to-teal-500' }}"
                             :style="'width: ' + progress + '%'"></div>
                     </div>
                 </div>
@@ -101,7 +121,12 @@
                         passed: false,
                         tick() {
                             const diff = this.target - Date.now();
-                            if (diff <= 0) { this.passed = true; this.days = this.hours = this.minutes = this.seconds = 0; return; }
+                            if (diff <= 0) {
+                                this.passed = true;
+                                this.days = this.hours = this.minutes = this.seconds = 0;
+                                $wire.$refresh();
+                                return;
+                            }
                             this.days = Math.floor(diff / 86400000);
                             this.hours = Math.floor((diff % 86400000) / 3600000);
                             this.minutes = Math.floor((diff % 3600000) / 60000);
@@ -112,13 +137,10 @@
                 >
                     {{-- Event Info --}}
                     <div class="text-center mb-6">
+                        @php $color = \App\Models\Event::typeColor($nextEvent->type); @endphp
                         <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
-                            @if($nextEvent->type === 'flight') bg-sky-100 text-sky-700
-                            @elseif($nextEvent->type === 'visit') bg-emerald-100 text-emerald-700
-                            @else bg-rose-100 text-rose-700 @endif">
-                            @if($nextEvent->type === 'flight') &#9992;
-                            @elseif($nextEvent->type === 'visit') &#10084;
-                            @else &#9733; @endif
+                            bg-{{ $color }}-100 text-{{ $color }}-700">
+                            {!! \App\Models\Event::typeIcon($nextEvent->type) !!}
                             {{ $nextEvent->title }}
                         </div>
                         <p class="text-sm text-gray-500 mt-2">
@@ -142,7 +164,7 @@
                         @endforeach
                     </div>
 
-                    {{-- Passed --}}
+                    {{-- Passed -> auto refresh to pick up next event --}}
                     <div x-show="passed" x-cloak class="text-center py-4">
                         <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 mb-3">
                             <svg class="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

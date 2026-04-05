@@ -41,7 +41,7 @@ class Calendar extends Component
         'end_time' => 'nullable|date|after_or_equal:start_time',
         'outbound_flight_time' => 'nullable|date',
         'return_flight_time' => 'nullable|date|after_or_equal:outbound_flight_time',
-        'recurrence_rule' => 'nullable|in:weekly,biweekly,monthly',
+        'recurrence_rule' => 'nullable|in:weekly,biweekly,monthly,yearly',
         'recurrence_day' => 'nullable|string',
         'recurrence_time' => 'nullable|string',
         'recurrence_until' => 'nullable|date',

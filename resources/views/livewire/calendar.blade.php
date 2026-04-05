@@ -346,7 +346,9 @@
 
     {{-- ======================== MODAL ======================== --}}
     @if($showModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4" x-data="{ showFlightFields: @entangle('type').live === 'visit' }" x-init="$el.querySelector('input[type=text]')?.focus()">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
+            x-data="{ showRecurrence: {{ $recurrence_rule ? 'true' : 'false' }} }"
+            x-init="$el.querySelector('input[type=text]')?.focus()">
             <div wire:click="closeModal" class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"></div>
 
             <div class="relative bg-white rounded-3xl shadow-2xl shadow-indigo-200/50 w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -421,6 +423,22 @@
                         </div>
                     @endif
 
+                    {{-- Start Time (always visible) --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Startzeit</label>
+                        <input type="datetime-local" wire:model="start_time"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 text-gray-700" />
+                        @error('start_time') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                    </div>
+
+                    {{-- End Time (always visible) --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Endzeit <span class="text-gray-400 font-normal">(optional, Standard: 3 Stunden)</span></label>
+                        <input type="datetime-local" wire:model="end_time"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 text-gray-700" />
+                        @error('end_time') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                    </div>
+
                     {{-- Flight fields (only for visit type) --}}
                     @if($type === 'visit')
                         <div class="border-2 border-sky-200 bg-sky-50/50 rounded-xl p-4 space-y-4">
@@ -443,68 +461,79 @@
                         </div>
                     @endif
 
-                    {{-- Standard Start/End (hidden when flight fields are used) --}}
-                    @if($type !== 'visit' || !$outbound_flight_time)
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Startzeit</label>
-                            <input type="datetime-local" wire:model="start_time"
-                                class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 text-gray-700" />
-                            @error('start_time') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
-                        </div>
+                    {{-- Recurring (collapsible) --}}
+                    <div class="border-2 rounded-xl transition-all duration-200
+                        {{ $recurrence_rule ? 'border-indigo-300 bg-indigo-50/50' : 'border-gray-200' }}">
+                        <button type="button"
+                            @click="showRecurrence = !showRecurrence"
+                            class="w-full flex items-center justify-between p-4 text-sm font-semibold transition-colors
+                                {{ $recurrence_rule ? 'text-indigo-700' : 'text-gray-600' }}">
+                            <div class="flex items-center gap-2">
+                                <span>&#128260;</span> Serientermin <span class="text-xs font-normal {{ $recurrence_rule ? 'text-indigo-500' : 'text-gray-400' }}">(optional)</span>
+                            </div>
+                            <svg class="w-4 h-4 transition-transform duration-200" :class="showRecurrence ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
 
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Endzeit <span class="text-gray-400 font-normal">(optional, Standard: 3 Stunden)</span></label>
-                            <input type="datetime-local" wire:model="end_time"
-                                class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 text-gray-700" />
-                            @error('end_time') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
-                        </div>
-                    @endif
+                        <div x-show="showRecurrence" x-collapse class="px-4 pb-4 space-y-3">
+                            <div>
+                                <label class="block text-xs font-medium text-indigo-700 mb-1">Wiederholung</label>
+                                <select wire:model.live="recurrence_rule"
+                                    class="w-full px-3 py-2 rounded-lg border border-indigo-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all text-sm text-gray-700 bg-white">
+                                    <option value="">Keine Wiederholung</option>
+                                    <option value="weekly">Wöchentlich</option>
+                                    <option value="biweekly">Alle 2 Wochen</option>
+                                    <option value="monthly">Monatlich</option>
+                                    <option value="yearly">Jährlich</option>
+                                </select>
+                            </div>
 
-                    {{-- Recurring --}}
-                    <div class="border-2 border-indigo-200 bg-indigo-50/50 rounded-xl p-4 space-y-3">
-                        <div class="flex items-center gap-2 text-indigo-700 text-sm font-semibold">
-                            <span>&#128260;</span> Serientermin <span class="text-xs font-normal text-indigo-500">(optional)</span>
-                        </div>
+                            @if($recurrence_rule)
+                                {{-- Wochentag only for weekly/biweekly --}}
+                                @if(in_array($recurrence_rule, ['weekly', 'biweekly']))
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-medium text-indigo-700 mb-1">Wochentag</label>
+                                            <select wire:model="recurrence_day"
+                                                class="w-full px-3 py-2 rounded-lg border border-indigo-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all text-sm text-gray-700 bg-white">
+                                                <option value="">Wie Startdatum</option>
+                                                <option value="monday">Montag</option>
+                                                <option value="tuesday">Dienstag</option>
+                                                <option value="wednesday">Mittwoch</option>
+                                                <option value="thursday">Donnerstag</option>
+                                                <option value="friday">Freitag</option>
+                                                <option value="saturday">Samstag</option>
+                                                <option value="sunday">Sonntag</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-indigo-700 mb-1">Uhrzeit</label>
+                                            <input type="time" wire:model="recurrence_time"
+                                                class="w-full px-3 py-2 rounded-lg border border-indigo-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all text-sm text-gray-700" />
+                                        </div>
+                                    </div>
+                                @else
+                                    {{-- For monthly/yearly: only time field --}}
+                                    <div>
+                                        <label class="block text-xs font-medium text-indigo-700 mb-1">Uhrzeit</label>
+                                        <input type="time" wire:model="recurrence_time"
+                                            class="w-full px-3 py-2 rounded-lg border border-indigo-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all text-sm text-gray-700" />
+                                    </div>
+                                @endif
 
-                        <div>
-                            <label class="block text-xs font-medium text-indigo-700 mb-1">Wiederholung</label>
-                            <select wire:model.live="recurrence_rule"
-                                class="w-full px-3 py-2 rounded-lg border border-indigo-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all text-sm text-gray-700 bg-white">
-                                <option value="">Keine Wiederholung</option>
-                                <option value="weekly">Wöchentlich</option>
-                                <option value="biweekly">Alle 2 Wochen</option>
-                                <option value="monthly">Monatlich</option>
-                            </select>
-                        </div>
-
-                        @if($recurrence_rule)
-                            <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block text-xs font-medium text-indigo-700 mb-1">Wochentag</label>
-                                    <select wire:model="recurrence_day"
-                                        class="w-full px-3 py-2 rounded-lg border border-indigo-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all text-sm text-gray-700 bg-white">
-                                        <option value="">—</option>
-                                        <option value="monday">Montag</option>
-                                        <option value="tuesday">Dienstag</option>
-                                        <option value="wednesday">Mittwoch</option>
-                                        <option value="thursday">Donnerstag</option>
-                                        <option value="friday">Freitag</option>
-                                        <option value="saturday">Samstag</option>
-                                        <option value="sunday">Sonntag</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-indigo-700 mb-1">Uhrzeit</label>
-                                    <input type="time" wire:model="recurrence_time"
+                                    <label class="block text-xs font-medium text-indigo-700 mb-1">Wiederholen bis <span class="text-indigo-400 font-normal">(optional)</span></label>
+                                    <input type="date" wire:model="recurrence_until"
                                         class="w-full px-3 py-2 rounded-lg border border-indigo-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all text-sm text-gray-700" />
                                 </div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-indigo-700 mb-1">Wiederholen bis <span class="text-indigo-400 font-normal">(optional)</span></label>
-                                <input type="date" wire:model="recurrence_until"
-                                    class="w-full px-3 py-2 rounded-lg border border-indigo-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all text-sm text-gray-700" />
-                            </div>
-                        @endif
+
+                                {{-- Info text about first occurrence --}}
+                                <p class="text-[11px] text-indigo-500">
+                                    Das erste Event findet am eingegebenen Startdatum statt. Alle weiteren Events folgen dem Serienrhythmus{{ in_array($recurrence_rule, ['weekly', 'biweekly']) && $recurrence_day ? ' (jeden ' . ['monday' => 'Montag', 'tuesday' => 'Dienstag', 'wednesday' => 'Mittwoch', 'thursday' => 'Donnerstag', 'friday' => 'Freitag', 'saturday' => 'Samstag', 'sunday' => 'Sonntag'][$recurrence_day] . ')' : '' }}.
+                                </p>
+                            @endif
+                        </div>
                     </div>
 
                     {{-- Actions --}}

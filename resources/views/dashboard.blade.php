@@ -1,24 +1,28 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-bold text-xl text-gray-800 leading-tight flex items-center gap-3">
-                <svg class="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/>
-                </svg>
-                {{ __('Dashboard') }}
-            </h2>
+            <div>
+                <h2 class="font-bold text-xl text-gray-800 leading-tight flex items-center gap-3">
+                    Willkommen zurück{{ auth()->user()->name ? ', ' . Str::before(auth()->user()->name, ' ') : '' }}
+                </h2>
+                <p class="text-sm text-gray-400 mt-0.5 font-medium">
+                    {{ now()->locale('de')->isoFormat('dddd, D. MMMM YYYY') }}
+                </p>
+            </div>
 
             @if(auth()->user()->couple_id)
                 @php $partner = auth()->user()->partner(); @endphp
                 @if($partner)
-                    <div class="flex items-center gap-3 px-4 py-2 rounded-xl bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-100">
-                        <svg class="w-5 h-5 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
-                        </svg>
-                        <span class="text-sm font-semibold text-gray-600">Verbunden mit:</span>
-                        <span class="text-sm font-extrabold bg-gradient-to-r from-pink-500 to-rose-500 bg-clip-text text-transparent">
-                            {{ $partner->name }}
-                        </span>
+                    <div class="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-100/80 shadow-sm shadow-pink-100/30">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                            {{ Str::upper(Str::substr($partner->name, 0, 1)) }}
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400 font-medium leading-none">Verbunden mit</p>
+                            <p class="text-sm font-extrabold bg-gradient-to-r from-pink-500 to-rose-500 bg-clip-text text-transparent leading-tight">
+                                {{ $partner->name }}
+                            </p>
+                        </div>
                     </div>
                 @endif
             @endif

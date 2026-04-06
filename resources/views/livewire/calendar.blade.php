@@ -1,6 +1,6 @@
 <div class="space-y-8" wire:poll.10s>
     {{-- Calendar --}}
-    <div class="bg-white rounded-2xl shadow-lg shadow-indigo-100/50 overflow-hidden">
+    <div class="bg-white rounded-2xl shadow-lg shadow-indigo-100/50 overflow-hidden border border-gray-100/50">
         {{-- Header with navigation and view switcher --}}
         <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-6 py-5">
             <div class="flex items-center justify-between mb-3">
@@ -251,43 +251,50 @@
         <div class="lg:col-span-1">
             <button
                 wire:click="openModal"
-                class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl shadow-lg shadow-indigo-200/50 p-6 hover:shadow-xl hover:shadow-indigo-200/60 transition-all duration-300 hover:-translate-y-0.5 group"
+                class="w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white rounded-2xl shadow-lg shadow-indigo-200/50 p-6 hover:shadow-xl hover:shadow-indigo-300/40 transition-all duration-300 hover:-translate-y-1 group relative overflow-hidden"
             >
-                <div class="flex items-center justify-center space-x-3">
-                    <svg class="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    <span class="text-lg font-semibold">Neues Event</span>
+                <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                <div class="relative flex flex-col items-center space-y-2">
+                    <div class="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                        <svg class="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                    </div>
+                    <span class="text-lg font-bold">Neues Event</span>
+                    <span class="text-sm text-white/70 font-medium">Termin erstellen</span>
                 </div>
             </button>
         </div>
 
         <div class="lg:col-span-2">
-            <div class="bg-white rounded-2xl shadow-lg shadow-indigo-100/50 p-6">
-                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                    </svg>
+            <div class="bg-white rounded-2xl shadow-lg shadow-indigo-100/50 p-6 border border-gray-100/50">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                        <svg class="w-4.5 h-4.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
                     Kommende Events
                 </h3>
 
                 @if($upcomingEvents->isEmpty())
                     <div class="text-center py-8">
-                        <div class="text-gray-300 mb-3">
-                            <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gray-50 mb-3">
+                            <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                             </svg>
                         </div>
-                        <p class="text-gray-400 text-sm">Noch keine Events geplant</p>
+                        <p class="text-gray-500 text-sm font-medium">Noch keine Events geplant</p>
+                        <p class="text-gray-400 text-xs mt-1">Erstelle dein erstes Event oben</p>
                     </div>
                 @else
-                    <div class="space-y-3">
+                    <div class="space-y-2.5">
                         @foreach($upcomingEvents as $event)
                             @php $color = \App\Models\Event::typeColor($event->type); @endphp
-                            <div class="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all duration-200 group">
+                            <div class="flex items-center justify-between p-4 rounded-xl border border-gray-100/80 hover:border-{{ $color }}-200 hover:shadow-md hover:shadow-{{ $color }}-50/50 transition-all duration-200 group bg-white">
                                 <div class="flex items-center space-x-4">
-                                    <div class="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-lg
-                                        bg-{{ $color }}-100 text-{{ $color }}-600">
+                                    <div class="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-lg shadow-sm
+                                        bg-{{ $color }}-50 text-{{ $color }}-600 border border-{{ $color }}-100">
                                         {!! \App\Models\Event::typeIcon($event->type) !!}
                                     </div>
                                     <div>
@@ -298,41 +305,40 @@
                                                 &mdash; {{ $event->end_time->format('d.m.Y, H:i') }} Uhr
                                             @endif
                                         </p>
-                                        <div class="flex items-center gap-2 mt-0.5">
-                                            <span class="text-xs {{ $event->created_by === $currentUserId ? 'text-indigo-500' : 'text-pink-500' }}">
-                                                {{ $event->created_by === $currentUserId ? 'Von dir' : 'Von ' . $event->creator->name }}
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full
+                                                {{ $event->created_by === $currentUserId ? 'bg-indigo-50 text-indigo-600' : 'bg-pink-50 text-pink-600' }}">
+                                                {{ $event->created_by === $currentUserId ? 'Von dir' : $event->creator->name }}
                                             </span>
                                             @if($event->shared)
-                                                <span class="text-xs text-purple-500 flex items-center gap-0.5">
+                                                <span class="inline-flex items-center gap-0.5 text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-600">
                                                     &#128107; Gemeinsam
                                                 </span>
-                                            @else
-                                                <span class="text-xs text-gray-400">Solo</span>
                                             @endif
                                             @if($event->isRecurring())
-                                                <span class="text-xs text-indigo-400">&#128260; Serie</span>
+                                                <span class="inline-flex items-center gap-0.5 text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-500">&#128260; Serie</span>
                                             @endif
                                             @if($event->isVisitWithFlights())
-                                                <span class="text-xs text-sky-400">&#9992; mit Flügen</span>
+                                                <span class="inline-flex items-center gap-0.5 text-xs px-2 py-0.5 rounded-full bg-sky-50 text-sky-500">&#9992; Flüge</span>
                                             @endif
                                         </div>
                                     </div>
                                 </div>
                                 @if($event->created_by === $currentUserId)
-                                    <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                        <button wire:click="editEvent({{ $event->id }})" class="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                                    <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                        <button wire:click="editEvent({{ $event->id }})" class="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-200">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                             </svg>
                                         </button>
-                                        <button wire:click="deleteEvent({{ $event->id }})" wire:confirm="Event wirklich löschen?" class="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                                        <button wire:click="deleteEvent({{ $event->id }})" wire:confirm="Event wirklich löschen?" class="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                             </svg>
                                         </button>
                                     </div>
                                 @else
-                                    <div class="px-3 py-1 rounded-full bg-pink-50 text-pink-500 text-xs font-medium">
+                                    <div class="px-3 py-1.5 rounded-full bg-pink-50 text-pink-500 text-xs font-medium border border-pink-100">
                                         {{ $event->creator->name }}
                                     </div>
                                 @endif
@@ -351,11 +357,27 @@
             x-init="$el.querySelector('input[type=text]')?.focus()">
             <div wire:click="closeModal" class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"></div>
 
-            <div class="relative bg-white rounded-3xl shadow-2xl shadow-indigo-200/50 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div class="relative bg-white rounded-3xl shadow-2xl shadow-indigo-200/50 w-full max-w-lg max-h-[90vh] overflow-y-auto scrollbar-thin">
                 <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-t-3xl px-6 py-5">
-                    <h3 class="text-lg font-bold text-white">
-                        {{ $editingEventId ? 'Event bearbeiten' : 'Neues Event erstellen' }}
-                    </h3>
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-white flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    @if($editingEventId)
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    @else
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    @endif
+                                </svg>
+                            </div>
+                            {{ $editingEventId ? 'Event bearbeiten' : 'Neues Event erstellen' }}
+                        </h3>
+                        <button wire:click="closeModal" class="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors duration-200">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <form wire:submit="save" class="p-6 space-y-5">

@@ -47,6 +47,7 @@
             @if($activeEvent)
                 {{-- ============ ACTIVE EVENT (rein Alpine.js) ============ --}}
                 <div
+                    wire:key="countdown-active-{{ $activeEvent?->id ?? 'none' }}-{{ $filterType ?: 'all' }}"
                     x-data="{
                         start: {{ $activeStartTimestamp }},
                         end: {{ $activeEndTimestamp }},
@@ -167,6 +168,7 @@
             @elseif($nextEvent)
                 {{-- ============ COUNTDOWN (rein Alpine.js) ============ --}}
                 <div
+                    wire:key="countdown-next-{{ $nextEvent?->id ?? 'none' }}-{{ $filterType ?: 'all' }}"
                     x-data="{
                         target: {{ $targetTimestamp }},
                         days: 0, hours: 0, minutes: 0, seconds: 0,

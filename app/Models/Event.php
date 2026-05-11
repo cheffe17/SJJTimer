@@ -181,7 +181,7 @@ class Event extends Model
     {
         $targetDow = $this->recurrence_day
             ? (self::DAY_MAP[$this->recurrence_day] ?? Carbon::MONDAY)
-            : $start->dayOfWeekIso;
+            : $start->dayOfWeek;
 
         // Find the next target weekday after start
         $next = $start->copy()->next(match ($targetDow) {

@@ -195,6 +195,11 @@ class Event extends Model
         });
         $next->setTime($hour, $minute, 0);
 
+        // Ensure at least one full week between start and first recurrence
+        if ($next->copy()->startOfDay()->diffInDays($start->copy()->startOfDay()) < 7) {
+            $next->addWeek();
+        }
+
         // For biweekly, add another week if the gap is only 1 week
         // Actually: biweekly means every 2 weeks from first occurrence
         // The first biweekly occurrence is 2 weeks after the next target day
